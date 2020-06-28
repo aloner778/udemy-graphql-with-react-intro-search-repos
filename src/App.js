@@ -26,6 +26,10 @@ class App extends Component {
     })
   }
 
+  handleSubmit = (e) => {
+    e.preventDefault()
+  }
+
   render() {
     const { query, first, last, before, after } = this.state
 
