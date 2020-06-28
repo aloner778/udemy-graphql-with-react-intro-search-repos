@@ -5,8 +5,10 @@ import { Query } from 'react-apollo'
 import client from './client'
 import { SEARCH_REPOSITORIES } from './graphql'
 
+const PER_PAGE = 5
+
 const DEFAULT_STATE = {
-  first: 5,
+  first: PER_PAGE,
   after: null,
   last: null,
   before: null,
@@ -31,10 +33,19 @@ class App extends Component {
     e.preventDefault()
   }
 
+  goNext(search) {
+    this.setState({
+      first: PER_PAGE,
+      after: search.pageInfo.endCursor,
+      last: null,
+      before: null
+    })
+  }
+
   render() {
     const { query, first, last, before, after } = this.state
 
-    console.log({query})
+    console.log({ query })
 
     return (
       <ApolloProvider client={client}>
@@ -63,12 +74,17 @@ class App extends Component {
                         const node = edge.node
                         return (
                           <li key={node.id}>
-                            <a href={node.url} target="_blank">{node.name}</a>
+                            <a href={node.url} rel="noopener noreferrer" target="_blank">{node.name}</a>
                           </li>
-                        ) 
+                        )
                       })
                     }
                   </ul>
+
+                  {
+                    search.pageInfo.hasNextPage === true ?
+                      <button onClick={this.goNext.bind(this, search)} >Next</button> : null
+                  }
                 </React.Fragment>
               )
             }
