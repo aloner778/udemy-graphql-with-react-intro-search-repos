@@ -4,17 +4,39 @@ import client from './client'
 import { ADD_STAR, REMOVE_STAR, SEARCH_REPOSITORIES } from './graphql'
 
 const StarButton = props => {
-  const {node, query, first, last, before, after} = props
+  const { node, query, first, last, before, after } = props
   const totalCount = node.stargazers.totalCount
   const viewerHasStarred = node.viewerHasStarred
   const starCount = totalCount === 1 ? "1 star" : `${totalCount} stars`
 
-  const StarStatus = ({addOrRemoveStar}) => {
+  const StarStatus = ({ addOrRemoveStar }) => {
     return (
       <button onClick={
         () => {
           addOrRemoveStar({
-            variables: { input: { starrableId: node.id }}
+            variables: { input: { starrableId: node.id } },
+            update: (store, { data: { addStar, removeStar } }) => {
+              const { starrable } = addStar || removeStar
+
+              const data = store.readQuery({
+                query: SEARCH_REPOSITORIES,
+                variables: { query, first, last, before, after }
+              })
+
+              const edges = data.search.edges
+              const newEdges = edges.map(edge => {
+                if (edge.node.id === node.id) {
+                  const totalCount = edge.node.stargazers.totalCount
+                  // const diff = viewerHasStarred ? -1 : 1
+                  const diff = starrable.viewerHasStarred ? 1 : -1
+                  const newTotalCount = totalCount + diff
+                  edge.node.stargazers.totalCount = newTotalCount
+                }
+                return edge
+              })
+              data.search.edges = newEdges
+              store.writeQuery({ query: SEARCH_REPOSITORIES, data })
+            }
           })
         }
       }>
@@ -26,14 +48,6 @@ const StarButton = props => {
   return (
     <Mutation
       mutation={viewerHasStarred ? REMOVE_STAR : ADD_STAR}
-      refetchQueries={
-        [
-          {
-            query: SEARCH_REPOSITORIES,
-            variables: { query, first, last, before, after }
-          }
-        ]
-      }
     >
       {
         addOrRemoveStar => {
@@ -122,7 +136,7 @@ class App extends Component {
                           <li key={node.id}>
                             <a href={node.url} rel="noopener noreferrer" target="_blank">{node.name}</a>
                             &nbsp;
-                            <StarButton node={node} {...{query, first, last, before,after}} />
+                            <StarButton node={node} {...{ query, first, last, before, after }} />
                           </li>
                         )
                       })
